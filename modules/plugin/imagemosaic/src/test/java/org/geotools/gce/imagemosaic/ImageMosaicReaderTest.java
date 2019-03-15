@@ -2260,6 +2260,9 @@ public class ImageMosaicReaderTest extends Assert {
             assertTrue(file.delete());
         }
         // Copy 2 not adjacent files (therefore creating void area between them)
+        if (directory2.exists()) {
+            FileUtils.deleteDirectory(directory2);
+        }
         directory2.mkdirs();
         for (File file :
                 FileUtils.listFiles(
