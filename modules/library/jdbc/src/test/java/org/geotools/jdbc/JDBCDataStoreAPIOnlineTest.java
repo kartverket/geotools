@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
+
 import org.geotools.data.DataSourceException;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.DefaultTransaction;
@@ -40,6 +41,7 @@ import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.simple.SimpleFeatureStore;
+import org.geotools.data.store.ContentFeatureCollection;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.filter.IllegalFilterException;
@@ -49,18 +51,23 @@ import org.geotools.geometry.jts.LiteCoordinateSequence;
 import org.geotools.geometry.jts.LiteCoordinateSequenceFactory;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
+import org.geotools.util.factory.GeoTools;
 import org.geotools.util.factory.Hints;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.Polygon;
 import org.opengis.feature.IllegalAttributeException;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
+import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.PropertyIsEqualTo;
+import org.opengis.filter.sort.SortBy;
+import org.opengis.filter.spatial.BBOX;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 public abstract class JDBCDataStoreAPIOnlineTest extends JDBCTestSupport {
@@ -85,6 +92,11 @@ public abstract class JDBCDataStoreAPIOnlineTest extends JDBCTestSupport {
             td.RIVER_GEOM = aname(td.RIVER_GEOM);
             td.RIVER_FLOW = aname(td.RIVER_FLOW);
             td.RIVER_RIVER = aname(td.RIVER_RIVER);
+
+            td.LAKE = tname(td.LAKE);
+            td.LAKE_ID = aname(td.LAKE_ID);
+            td.LAKE_GEOM = aname(td.LAKE_GEOM);
+            td.LAKE_NAME = aname(td.LAKE_NAME);
 
             td.build();
         }
@@ -573,6 +585,22 @@ public abstract class JDBCDataStoreAPIOnlineTest extends JDBCTestSupport {
             assertFalse(writer.hasNext());
 
             feature = (SimpleFeature) writer.next();
+            feature.setAttributes(td.newRoad.getAttributes());
+            writer.write();
+
+            assertFalse(writer.hasNext());
+
+            assertEquals(td.roadFeatures.length + 1, count(tname("road")));
+        }
+    }
+
+    public void testGetFeaturesWriterAppend() throws IOException {
+        try (FeatureWriter<SimpleFeatureType, SimpleFeature> writer =
+                dataStore.getFeatureWriterAppend(tname("road"), Transaction.AUTO_COMMIT)) {
+
+            assertFalse(writer.hasNext());
+
+            SimpleFeature feature = writer.next();
             feature.setAttributes(td.newRoad.getAttributes());
             writer.write();
 
@@ -1657,4 +1685,59 @@ public abstract class JDBCDataStoreAPIOnlineTest extends JDBCTestSupport {
         params.put(JDBCDataStoreFactory.BATCH_INSERT_SIZE.key, 1);
         return params;
     }
+
+    public void testWritingPolygons() throws IOException {
+        try (Transaction transaction = new DefaultTransaction()) {
+            try (FeatureWriter<SimpleFeatureType, SimpleFeature> writer =
+                       dataStore.getFeatureWriterAppend(td.LAKE, transaction)) {
+
+                assertFalse(writer.hasNext());
+
+                SimpleFeature feature = writer.next();
+                feature.setAttributes(td.rectangleLake.getAttributes());
+                writer.write();
+
+                assertFalse(writer.hasNext());
+            }
+
+            transaction.commit();
+
+            Query allLakesQuery = new Query(tname("lake"), Filter.INCLUDE);
+            allLakesQuery.setSortBy(new SortBy[]{SortBy.NATURAL_ORDER});
+            try (
+                  FeatureReader<SimpleFeatureType, SimpleFeature> reader =
+                        dataStore.getFeatureReader(allLakesQuery, transaction)) {
+
+                SimpleFeature feature = reader.next();
+                assertFeatureTypesEqual(td.lakeType, feature.getFeatureType());
+                assertEquals("muddy", feature.getAttribute(td.LAKE_NAME));
+
+                feature = reader.next();
+                assertEquals("perfect rectangle", feature.getAttribute(td.LAKE_NAME));
+                Polygon polygon = (Polygon) feature.getAttribute(td.LAKE_GEOM);
+                assertTrue("isRectangle", polygon.isRectangle());
+                polygon.normalize(); //no guarantee the geometry from database is normalized
+                assertEquals(td.rectangleLake.getAttribute(td.LAKE_GEOM), feature.getAttribute(td.LAKE_GEOM));
+
+                assertFalse(reader.hasNext());
+            }
+        }
+    }
+
+    public void testFindingPolygons() throws IOException {
+        try (FeatureWriter<SimpleFeatureType, SimpleFeature> writer =
+                     dataStore.getFeatureWriterAppend(td.LAKE, Transaction.AUTO_COMMIT)) {
+
+            SimpleFeature feature = writer.next();
+            feature.setAttributes(td.rectangleLake.getAttributes());
+            writer.write();
+        }
+
+        FilterFactory2 filterFactory = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
+        BBOX bbox = filterFactory.bbox(td.LAKE_GEOM, 16.78870,4.08620, 16.87960,4.53300, "EPSG:4326");
+
+        ContentFeatureCollection features = dataStore.getFeatureSource(td.LAKE).getFeatures(bbox);
+        assertEquals(1, features.size());
+    }
+
 }

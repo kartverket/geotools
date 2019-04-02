@@ -18,6 +18,7 @@ package org.geotools.jdbc;
 
 import java.util.Collections;
 import java.util.HashSet;
+
 import org.geotools.data.DataUtilities;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
@@ -47,10 +48,17 @@ public class TestData {
     public String RIVER_RIVER = "river";
     public String RIVER_FLOW = "flow";
 
+    public String LAKE = "lake";
+    public String LAKE_ID = "id";
+    public String LAKE_GEOM = "geom";
+    public String LAKE_NAME = "name";
+
     public int initialFidValue = 0;
     public GeometryFactory gf;
     public FilterFactory ff;
     public String namespace = "http://www.geotools.org/test";
+
+    // roads ...
     public SimpleFeatureType roadType;
     public SimpleFeatureType subRoadType;
     public SimpleFeature[] roadFeatures;
@@ -60,12 +68,22 @@ public class TestData {
     public Filter rd2Filter;
     public Filter rd12Filter;
     public SimpleFeature newRoad;
+
+    // rivers ...
     public SimpleFeatureType riverType;
     public SimpleFeatureType subRiverType;
     public SimpleFeature[] riverFeatures;
     public ReferencedEnvelope riverBounds;
     public Filter rv1Filter;
     public SimpleFeature newRiver;
+
+    // lakes ...
+    public SimpleFeatureType lakeType;
+    public SimpleFeature[] lakeFeatures;
+    public SimpleFeature muddyLake;
+    public SimpleFeature rectangleLake;
+    public ReferencedEnvelope lakeBounds;
+
     public boolean forceLongitudeFirst = false;
 
     public TestData(int initialFidValue) throws Exception {
@@ -78,8 +96,12 @@ public class TestData {
     public void build() throws Exception {
         createRoadData();
         createRiverData();
+        createLakeData();
     }
 
+    /**
+     * @see JDBCDataStoreAPITestSetup#createRoadTable()
+     */
     void createRoadData() throws Exception {
         roadType =
                 DataUtilities.createType(
@@ -88,7 +110,6 @@ public class TestData {
         subRoadType =
                 DataUtilities.createType(
                         namespace + ROAD, ROAD_ID + ":0," + ROAD_GEOM + ":LineString");
-        gf = new GeometryFactory();
 
         roadFeatures = new SimpleFeature[3];
 
@@ -151,6 +172,9 @@ public class TestData {
                         ROAD + "." + (initialFidValue + 3));
     }
 
+    /**
+     * @see JDBCDataStoreAPITestSetup#createRiverTable()
+     */
     void createRiverData() throws Exception {
         riverType =
                 DataUtilities.createType(
@@ -166,7 +190,6 @@ public class TestData {
         subRiverType =
                 DataUtilities.createType(
                         namespace + "." + RIVER, RIVER_RIVER + ":String," + RIVER_FLOW + ":0.0");
-        gf = new GeometryFactory();
         riverFeatures = new SimpleFeature[2];
 
         //       9,7     13,7
@@ -229,6 +252,61 @@ public class TestData {
                         },
                         RIVER + "." + (initialFidValue + 2));
     }
+
+
+    /**
+     * @see JDBCDataStoreAPITestSetup#createLakeTable()
+     */
+    void createLakeData() throws Exception {
+        
+        lakeType =
+              DataUtilities.createType(namespace, LAKE,
+                    LAKE_ID + ":0," +
+                          LAKE_GEOM + ":Polygon," +
+                          LAKE_NAME + ":String");
+
+
+        //
+        //         +  14,8
+        //        / \
+        //  12,6 +   +  16,6
+        //        \ /
+        //         +  14,4
+        //
+        muddyLake = SimpleFeatureBuilder.build(
+                lakeType,
+                new Object[]{
+                        Integer.valueOf(0), polygon(new int[]{12, 6, 14, 8, 16, 6, 16, 4, 14, 4, 12, 6}), "muddy",
+                },
+                LAKE + "." + (initialFidValue));
+
+        
+        //        16,8                  24,8
+        //           +------------------+
+        //           |                  |
+        //           |                  |
+        //           |                  |
+        //           +------------------+
+        //        16,4                 24,4
+        //
+        // polygon intersects muddyLake at point (16,6)
+        rectangleLake = SimpleFeatureBuilder.build(
+                lakeType,
+                new Object[]{
+                        Integer.valueOf(1), polygon(new int[]{16, 4, 16, 8, 24, 8, 24, 4, 16, 4}), "perfect rectangle",
+                },
+                LAKE + "." + (initialFidValue + 1));
+
+        lakeFeatures = new SimpleFeature[]{muddyLake};
+
+        lakeBounds = new ReferencedEnvelope(CRS.decode("EPSG:4326", forceLongitudeFirst));
+        for (SimpleFeature lakeFeature : lakeFeatures) {
+            lakeBounds.expandToInclude(new ReferencedEnvelope(lakeFeature.getBounds()));
+        }
+
+
+    }
+
 
     /**
      * Creates a line from the specified (<var>x</var>,<var>y</var>) coordinates. The coordinates
