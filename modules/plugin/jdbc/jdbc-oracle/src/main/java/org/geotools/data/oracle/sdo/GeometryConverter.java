@@ -160,50 +160,54 @@ public class GeometryConverter {
         ARRAY SDO_ORDINATES;
 
         if (point == null) {
-            final Envelope env = geom.getEnvelopeInternal();
-            if (env.getWidth() > 0
-                    && env.getHeight() > 0
-                    && !(geom instanceof GeometryCollection)
-                    && geom.isRectangle()) {
-                // rectangle optimization. Actually, more than an optimization. A few operators
-                // do not work properly if they don't get rectangular geoms encoded as rectangles
-                // SDO_FILTER is an example of this silly situation
-                SDO_POINT = null;
-                int elemInfo[] = new int[] {1, 1003, 3};
-                double ordinates[];
-                if (SDO.D(geom) == 2)
-                    ordinates =
-                            new double[] {
-                                env.getMinX(), env.getMinY(), env.getMaxX(), env.getMaxY()
-                            };
-                else
-                    ordinates =
-                            new double[] {
-                                env.getMinX(), env.getMinY(), 0, env.getMaxX(), env.getMaxY(), 0
-                            };
+            //            final Envelope env = geom.getEnvelopeInternal();
+            //            if (env.getWidth() > 0
+            //                    && env.getHeight() > 0
+            //                    && !(geom instanceof GeometryCollection)
+            //                    && geom.isRectangle()) {
+            //                // rectangle optimization. Actually, more than an optimization. A few
+            // operators
+            //                // do not work properly if they don't get rectangular geoms encoded as
+            // rectangles
+            //                // SDO_FILTER is an example of this silly situation
+            //                SDO_POINT = null;
+            //                int elemInfo[] = new int[] {1, 1003, 3};
+            //                double ordinates[];
+            //                if (SDO.D(geom) == 2)
+            //                    ordinates =
+            //                            new double[] {
+            //                                env.getMinX(), env.getMinY(), env.getMaxX(),
+            // env.getMaxY()
+            //                            };
+            //                else
+            //                    ordinates =
+            //                            new double[] {
+            //                                env.getMinX(), env.getMinY(), 0, env.getMaxX(),
+            // env.getMaxY(), 0
+            //                            };
+            //
+            //                SDO_POINT = null;
+            //                SDO_ELEM_INFO = toARRAY(elemInfo, "MDSYS.SDO_ELEM_INFO_ARRAY");
+            //                SDO_ORDINATES = toARRAY(ordinates, "MDSYS.SDO_ORDINATE_ARRAY");
+            //            } else {
+            int elemInfo[] = SDO.elemInfo(geom);
+            double ordinates[] = SDO.ordinates(geom);
 
-                SDO_POINT = null;
-                SDO_ELEM_INFO = toARRAY(elemInfo, "MDSYS.SDO_ELEM_INFO_ARRAY");
-                SDO_ORDINATES = toARRAY(ordinates, "MDSYS.SDO_ORDINATE_ARRAY");
-            } else {
-                int elemInfo[] = SDO.elemInfo(geom);
-                double ordinates[] = SDO.ordinates(geom);
-
-                SDO_POINT = null;
-                SDO_ELEM_INFO = toARRAY(elemInfo, "MDSYS.SDO_ELEM_INFO_ARRAY");
-                SDO_ORDINATES = toARRAY(ordinates, "MDSYS.SDO_ORDINATE_ARRAY");
-            }
+            SDO_POINT = null;
+            SDO_ELEM_INFO = toARRAY(elemInfo, "MDSYS.SDO_ELEM_INFO_ARRAY");
+            SDO_ORDINATES = toARRAY(ordinates, "MDSYS.SDO_ORDINATE_ARRAY");
+            //            }
         } else { // Point Optimization
             Datum data[] =
-                    new Datum[] {
-                        toNUMBER(point[0]), toNUMBER(point[1]), toNUMBER(point[2]),
+                    new Datum[]{
+                            toNUMBER(point[0]), toNUMBER(point[1]), toNUMBER(point[2]),
                     };
             SDO_POINT = toSTRUCT(data, "MDSYS.SDO_POINT_TYPE");
             SDO_ELEM_INFO = null;
             SDO_ORDINATES = null;
         }
         Datum attributes[] =
-                new Datum[] {SDO_GTYPE, SDO_SRID, SDO_POINT, SDO_ELEM_INFO, SDO_ORDINATES};
+                new Datum[]{SDO_GTYPE, SDO_SRID, SDO_POINT, SDO_ELEM_INFO, SDO_ORDINATES};
         return toSTRUCT(attributes, DATATYPE);
     }
 
