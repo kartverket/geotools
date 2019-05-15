@@ -1293,10 +1293,10 @@ public final class ImageUtilities {
         try {
             // Check extended class first
             if (planarImage instanceof WritableRenderedImageAdapter) {
-                cleanField(planarImage, "theWritableImage");
-                cleanField(planarImage, "theImage", true);
+                cleanField(planarImage, "theWritableImage", false);
+//                cleanField(planarImage, "theImage", true);
             } else if (planarImage instanceof RenderedImageAdapter) {
-                cleanField(planarImage, "theImage");
+//                cleanField(planarImage, "theImage");
             }
         } catch (NoSuchFieldException | IllegalAccessException e) {
             // fine, we tried
@@ -1309,18 +1309,6 @@ public final class ImageUtilities {
         planarImage.dispose();
     }
 
-    /**
-     * Helper that cleans up a field
-     *
-     * @param theObject
-     * @param fieldName
-     * @throws NoSuchFieldException
-     * @throws IllegalAccessException
-     */
-    private static void cleanField(Object theObject, String fieldName)
-            throws NoSuchFieldException, IllegalAccessException {
-        cleanField(theObject, fieldName, false);
-    }
 
     /**
      * Helper that cleans up a field
