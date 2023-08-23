@@ -119,7 +119,7 @@
     <git.commit.runOnlyOnce>true</git.commit.runOnlyOnce>
     <fmt.action>format</fmt.action>
     <fmt.skip>false</fmt.skip>
-    <batik.version>1.10</batik.version>
+    <batik.version>1.17</batik.version>
     <logging-profile>quiet-logging</logging-profile>
     <errorProneFlags></errorProneFlags>
     <errorProne.version>2.3.2</errorProne.version>
