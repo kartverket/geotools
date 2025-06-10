@@ -8,5 +8,5 @@ metadata:
 spec:
   type: "library"
   lifecycle: "production"
-  owner: "heimdall"
-  system: "matrikkel"
+  owner: "smia"
+  system: "stedsnavn"
