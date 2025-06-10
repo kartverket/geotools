@@ -1,1 +1,7 @@
-/.security/ @lislei
+#------------------------------------------------------------------------------
+#
+# Denne koden forvaltes av:   Team Smia
+# Dokumentasjon:              https://kartverket.atlassian.net/wiki/spaces/STED/overview
+
+* @kartverket/smia
+/.security/ @kristmh
