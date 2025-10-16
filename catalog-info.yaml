@@ -9,4 +9,4 @@ spec:
   type: "library"
   lifecycle: "production"
   owner: "smia"
-  system: "stedsnavn"
+  system: "ssr"
